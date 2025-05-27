@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 class YouTubeDownloader extends StatefulWidget {
   const YouTubeDownloader({super.key});
@@ -19,6 +20,8 @@ class _YouTubeDownloaderState extends State<YouTubeDownloader> {
   bool downloadComplete = false;
 
   Future<void> pickCookiesFile() async {
+    // downloadComplete = true;
+    // setState(() {});
     final result = await FilePicker.platform.pickFiles();
     if (result != null) {
       setState(() {
@@ -39,7 +42,8 @@ class _YouTubeDownloaderState extends State<YouTubeDownloader> {
 
     final ytDlpPath = '${Directory.current.path}\\windows\\yt-dlp_x86.exe';
 
-    final downloadDir = '${Platform.environment['USERPROFILE']}\\Downloads';
+    final downloadDir =
+        '${Platform.environment['USERPROFILE']}\\Downloads\\Videos';
 
     final process = await Process.start(ytDlpPath, [
       '-f',
@@ -77,30 +81,63 @@ class _YouTubeDownloaderState extends State<YouTubeDownloader> {
       progress = 1.0;
       downloadComplete = true;
     });
+    try {
+      final file = File(cookiesPath!);
+      if (await file.exists()) {
+        await file.delete();
+        setState(() {
+          output += '\nCookies file deleted successfully.';
+          cookiesPath = null;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        output += '\n[Warning] Failed to delete cookies file: $e';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(title: const Text('YouTube Downloader')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20),
         child: Column(
+          spacing: 10,
           children: [
-            TextField(
-              controller: urlController,
-              decoration: const InputDecoration(labelText: 'YouTube URL'),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: pickCookiesFile,
-              child: Text(
-                cookiesPath != null ? 'Cookies Selected' : 'Pick Cookies File',
+            if (!_buttonClick)
+              TextField(
+                controller: urlController,
+                decoration: InputDecoration(
+                  labelText: 'YouTube URL',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
               ),
-            ),
+            const SizedBox(height: 10),
+            if (!_buttonClick)
+              ElevatedButton(
+                onPressed: pickCookiesFile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      cookiesPath != null ? Colors.green : Colors.red,
+                ),
+                child: Text(
+                  cookiesPath != null
+                      ? 'Cookies Selected'
+                      : 'Pick Cookies File',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
             const SizedBox(height: 10),
             downloadComplete
                 ? ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
                   onPressed: () {
                     setState(() {
                       urlController.clear();
@@ -111,13 +148,21 @@ class _YouTubeDownloaderState extends State<YouTubeDownloader> {
                       downloadComplete = false;
                     });
                   },
-                  child: Text("Clear"),
+                  child: Text("Clear", style: TextStyle(color: Colors.white)),
                 )
                 : _buttonClick
-                ? CircularProgressIndicator()
+                ? SizedBox(
+                  height: 150,
+                  width: double.infinity,
+                  child: Lottie.asset("assets/downloading.json"),
+                )
                 : ElevatedButton(
                   onPressed: downloadVideo,
-                  child: const Text('Download Max Quality'),
+
+                  child: const Text(
+                    'Download Max Quality',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
             const SizedBox(height: 20),
             if (_buttonClick)
@@ -125,14 +170,20 @@ class _YouTubeDownloaderState extends State<YouTubeDownloader> {
                 value: progress,
                 minHeight: 8,
                 backgroundColor: Colors.grey[300],
-                color: Colors.blue,
+                color: Colors.cyan,
               ),
             const SizedBox(height: 10),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Text(output, style: const TextStyle(fontSize: 12)),
-              ),
-            ),
+            downloadComplete
+                ? SizedBox(
+                  height: 200,
+                  width: double.infinity,
+                  child: Lottie.asset("assets/downloaded.json", repeat: false),
+                )
+                : Expanded(
+                  child: SingleChildScrollView(
+                    child: Text(output, style: const TextStyle(fontSize: 12)),
+                  ),
+                ),
           ],
         ),
       ),
